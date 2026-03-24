@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulador de Préstamos Inteligente</title>
+    <!-- Fuente moderna -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Simulador y Amortización</h1>
+            <p>Calcula tu préstamo y descubre el impacto real de hacer pagos extra a capital.</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Barra lateral: Formulario -->
+            <aside class="sidebar card">
+                <h2>Parámetros Dinámicos</h2>
+                <form id="loanForm">
+                    <div class="input-group">
+                        <label for="monto">Monto del Préstamo ($)</label>
+                        <input type="number" id="monto" step="0.01" min="1" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="plazo">Plazo Original (meses)</label>
+                        <input type="number" id="plazo" min="1" required>
+                    </div>
+
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="tipoTasa">Tipo de Tasa</label>
+                            <select id="tipoTasa"
+                                style="width: 100%; padding: 0.625rem; border-radius: 0.5rem; border: 1px solid var(--border); font-family: inherit; font-size: 1rem;">
+                                <option value="nominal">Nominal Anual</option>
+                                <option value="efectiva">Efectiva Anual</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="tasaValor">Valor de Tasa (%)</label>
+                            <input type="number" id="tasaValor" step="0.01" min="0">
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="cuotaTotal">Cuota Mensual ($)</label>
+                            <input type="number" id="cuotaTotal" step="0.01" min="1" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="seguro">Seguro Incluido ($)</label>
+                            <input type="number" id="seguro" step="0.01" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="info-banner">
+                        <p><strong>Desglose Interno Calculado</strong></p>
+                        <ul>
+                            <li>Pago Total Mensual: <span id="lblTotal">$0.00</span></li>
+                            <li>(-) Seguro: <span id="lblSeguro">$0.00</span></li>
+                            <li class="total-line"><strong>(=) Cuota a Préstamo: <span
+                                        id="lblCuota">$0.00</span></strong></li>
+                        </ul>
+                    </div>
+
+                    <div class="input-group highlight-input">
+                        <label for="pagoExtra">Pago Extra Mensual a Capital ($)</label>
+                        <input type="number" id="pagoExtra" step="0.01" min="0">
+                    </div>
+
+                    <div class="actions">
+                        <button type="button" id="btnCalcular" class="btn btn-primary">Calcular Amortización</button>
+                        <button type="button" id="btnSimular" class="btn btn-secondary">Simular con Pago Extra</button>
+                        <button type="button" id="btnLimpiar" class="btn btn-outline">Limpiar Todo</button>
+                    </div>
+                </form>
+            </aside>
+
+            <!-- Resultados -->
+            <div class="results-area">
+                <div id="alertBox" class="alert hidden"></div>
+
+                <div class="section-title">
+                    <h3>Resumen Directo del Préstamo</h3>
+                </div>
+
+                <div class="summary-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Pagado</div>
+                        <div class="stat-value" id="s_totalPagado">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Intereses</div>
+                        <div class="stat-value" id="s_totalInteres">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Seguro</div>
+                        <div class="stat-value" id="s_totalSeguro">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Costo Financiero Total</div>
+                        <div class="stat-value font-bold" id="s_costoFinanciero">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Meses Reales de Pago</div>
+                        <div class="stat-value" id="s_mesesReales">-</div>
+                    </div>
+                    <div class="stat-card highlight-green" id="cardAhorroInt" style="display: none;">
+                        <div class="stat-label">Ahorro en Intereses</div>
+                        <div class="stat-value" id="s_ahorroInteres">-</div>
+                    </div>
+                    <div class="stat-card highlight-green" id="cardAhorroMeses" style="display: none;">
+                        <div class="stat-label">Ahorro vs Plazo Original</div>
+                        <div class="stat-value" id="s_ahorroMeses">-</div>
+                    </div>
+                </div>
+
+                <div id="comparativaSection" style="display: none;">
+                    <div class="section-title">
+                        <h3>Comparativa de Escenarios</h3>
+                    </div>
+                    <div class="comparison-grid">
+                        <div class="scenario-card normal-scenario">
+                            <h3>Escenario Normal (Sin pago extra)</h3>
+                            <ul>
+                                <li><span>Meses Totales:</span> <strong id="compNormalMeses">-</strong></li>
+                                <li><span>Intereses:</span> <strong id="compNormalInt">-</strong></li>
+                                <li><span>Seguro Total:</span> <strong id="compNormalSeg">-</strong></li>
+                                <li class="total-pt"><span>Total Pagado:</span> <strong id="compNormalTotal">-</strong>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="scenario-card extra-scenario">
+                            <div class="badge-tag">Con Pago Extra</div>
+                            <h3>Escenario con Pago Extra</h3>
+                            <ul>
+                                <li><span>Meses Totales:</span> <strong id="compExtraMeses">-</strong> <span
+                                        id="diffMeses"></span></li>
+                                <li><span>Intereses:</span> <strong id="compExtraInt">-</strong> <span
+                                        id="diffInt"></span>
+                                </li>
+                                <li><span>Seguro Total:</span> <strong id="compExtraSeg">-</strong> <span
+                                        id="diffSeg"></span></li>
+                                <li class="total-pt"><span>Total Pagado:</span> <strong id="compExtraTotal">-</strong>
+                                    <span id="diffTotal"></span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-wrapper card">
+                    <div class="table-header flex-header">
+                        <h2 id="tableTitle">Tabla de Amortización Normal</h2>
+                        <button id="btnExport" class="btn btn-outline btn-sm">Exportar a CSV</button>
+                    </div>
+                    <div class="table-scroll">
+                        <table id="amortizationTable">
+                            <thead>
+                                <tr>
+                                    <th>Mes</th>
+                                    <th>Cuota</th>
+                                    <th>Pago Préstamo</th>
+                                    <th>Interés</th>
+                                    <th>Capital</th>
+                                    <th class="extra-col">Pago Extra</th>
+                                    <th>Seguro</th>
+                                    <th>Total Mes</th>
+                                    <th>Saldo Restante</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
