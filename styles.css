@@ -484,3 +484,52 @@ td.extra-val {
         grid-template-columns: 1fr;
     }
 }
+
+/* Abonos Específicos */
+.specific-payments-section {
+    margin-bottom: 1.25rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+}
+
+.specific-payments-section h4 {
+    font-size: 0.85rem;
+    color: var(--text-main);
+    margin-bottom: 0.75rem;
+}
+
+.specific-payment-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+.specific-payment-row input {
+    width: 100%;
+    padding: 0.4rem;
+    font-size: 0.9rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--border);
+}
+
+.btn-remove-payment {
+    background: #fee2e2;
+    color: #ef4444;
+    border: none;
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove-payment:hover {
+    background: #fca5a5;
+    color: #b91c1c;
+}

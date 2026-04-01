@@ -29,6 +29,9 @@ function loadDefaults() {
     document.getElementById('seguro').value = "2.08";
     document.getElementById('pagoExtra').value = "0";
 
+    const list = document.getElementById('specificPaymentsList');
+    if (list) list.innerHTML = '';
+
     updateLiveInfoBox();
     hideAlert();
 }
@@ -38,11 +41,42 @@ function bindEvents() {
     document.getElementById('btnSimular').addEventListener('click', () => runSimulation('extra'));
     document.getElementById('btnLimpiar').addEventListener('click', loadDefaults);
     document.getElementById('btnExport').addEventListener('click', exportToCSV);
+    document.getElementById('btnAddSpecificPayment').addEventListener('click', () => addSpecificPaymentRow());
 
     // Actualiza la tarjeta gris info-box en vivo si cambian la cuota total o el seguro
     ['cuotaTotal', 'seguro'].forEach(id => {
         document.getElementById(id).addEventListener('input', updateLiveInfoBox);
     });
+}
+
+function addSpecificPaymentRow(mes = '', monto = '') {
+    const list = document.getElementById('specificPaymentsList');
+    const row = document.createElement('div');
+    row.className = 'specific-payment-row';
+    row.innerHTML = `
+        <input type="number" class="sp-mes" placeholder="Mes (ej. 12)" min="1" step="1" value="${mes}">
+        <input type="number" class="sp-monto" placeholder="Monto ($)" min="1" step="0.01" value="${monto}">
+        <button type="button" class="btn-remove-payment" title="Eliminar">&times;</button>
+    `;
+    row.querySelector('.btn-remove-payment').addEventListener('click', () => {
+        row.remove();
+    });
+    list.appendChild(row);
+}
+
+function getSpecificPayments() {
+    const payments = {};
+    const rows = document.querySelectorAll('.specific-payment-row');
+    rows.forEach(row => {
+        const mesInput = row.querySelector('.sp-mes');
+        const montoInput = row.querySelector('.sp-monto');
+        const mes = parseInt(mesInput.value);
+        const monto = parseFloat(montoInput.value);
+        if (mes > 0 && monto > 0) {
+            payments[mes] = (payments[mes] || 0) + monto;
+        }
+    });
+    return payments;
 }
 
 function updateLiveInfoBox() {
@@ -85,11 +119,12 @@ function runSimulation(escenario) {
     }
 
     const cuotaFijaReal = v.cuotaTotal() - v.seguro();
+    const pagosEspecificos = getSpecificPayments();
 
     // Calcular los dos escenarios en background para nutrir el UI Comparativo
-    const simNormal = generarAmortizacion(v.monto(), v.plazo(), tasaMensual, cuotaFijaReal, v.seguro(), 0);
+    const simNormal = generarAmortizacion(v.monto(), v.plazo(), tasaMensual, cuotaFijaReal, v.seguro(), 0, {});
     const valorExtra = v.extra() > 0 ? v.extra() : 0;
-    const simExtra = generarAmortizacion(v.monto(), v.plazo(), tasaMensual, cuotaFijaReal, v.seguro(), valorExtra);
+    const simExtra = generarAmortizacion(v.monto(), v.plazo(), tasaMensual, cuotaFijaReal, v.seguro(), valorExtra, pagosEspecificos);
 
     if (simNormal.errorInfinidad) {
         showAlert("ATENCIÓN: La cuota mensual es inferior al interés generado mes a mes. Para evitar congelar el navegador se detuvo tras 1000 iteraciones.");
@@ -99,9 +134,16 @@ function runSimulation(escenario) {
     const activeData = escenario === 'normal' ? simNormal : simExtra;
     globalActiveTable = activeData.tableArray;
 
+    let descTitle = '';
+    const hasSpecific = Object.keys(pagosEspecificos).length > 0;
+    if (valorExtra > 0 && hasSpecific) descTitle = `(${formatoDolar(valorExtra)}/mes + Abonos puntuales)`;
+    else if (valorExtra > 0) descTitle = `(${formatoDolar(valorExtra)}/mes aplicados)`;
+    else if (hasSpecific) descTitle = `(Abonos puntuales aplicados)`;
+    else descTitle = `(Sin extras programados)`;
+
     document.getElementById('tableTitle').innerText = escenario === 'normal'
         ? 'Tabla de Amortización Normal'
-        : `Tabla de Amortización Extra (${formatoDolar(valorExtra)}/mes aplicados)`;
+        : `Tabla de Amortización Extra ${descTitle}`;
 
     // Mostrar u ocultar secciones de ahorro y comparativa dependiendo del botón que se presionó
     const mostrarExtra = escenario === 'extra';
@@ -114,7 +156,7 @@ function runSimulation(escenario) {
 }
 
 // Función CORE de lógica matemática y cálculo del préstamo
-function generarAmortizacion(monto, plazoOrig, tasaMensual, cuotaFija, seguroM, pagoExtraManual) {
+function generarAmortizacion(monto, plazoOrig, tasaMensual, cuotaFija, seguroM, pagoExtraManual, pagosEspecificos = {}) {
     let tableArray = [];
     let saldo = monto;
     let tInteres = 0;
@@ -135,14 +177,18 @@ function generarAmortizacion(monto, plazoOrig, tasaMensual, cuotaFija, seguroM, 
         let interesMes = saldo * tasaMensual;
         let capitalTeorico = cuotaFija - interesMes;
 
+        // Sumar pago extra fijo + el pago específico si existe en este mes
+        let pagoExtraPuntual = pagosEspecificos[mes] || 0;
+        let pagoExtraTotalMes = pagoExtraManual + pagoExtraPuntual;
+
         // Bloqueador de deuda expansiva sin solución
-        if (capitalTeorico + pagoExtraManual <= 0) {
+        if (capitalTeorico + pagoExtraTotalMes <= 0) {
             errorInfinidad = true;
             break;
         }
 
         let capitalAplicar = capitalTeorico > 0 ? capitalTeorico : 0;
-        let pagoExtraAplicar = pagoExtraManual;
+        let pagoExtraAplicar = pagoExtraTotalMes;
         let cuotaPrestamoAfectada = cuotaFija;
 
         // Ajuste automático exacto para el mes final del plazo, o si se adelanta el pago:

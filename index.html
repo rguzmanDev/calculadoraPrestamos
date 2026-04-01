@@ -69,8 +69,14 @@
                     </div>
 
                     <div class="input-group highlight-input">
-                        <label for="pagoExtra">Pago Extra Mensual a Capital ($)</label>
-                        <input type="number" id="pagoExtra" step="0.01" min="0">
+                        <label for="pagoExtra">Pago Extra Fijo a Capital ($)</label>
+                        <input type="number" id="pagoExtra" step="0.01" min="0" placeholder="Abono en todos los meses">
+                    </div>
+
+                    <div class="specific-payments-section">
+                        <h4>Abonos a Capital en Meses Específicos</h4>
+                        <div id="specificPaymentsList"></div>
+                        <button type="button" id="btnAddSpecificPayment" class="btn btn-outline btn-sm" style="width: 100%; margin-top: 0.5rem;">+ Añadir Abono Puntual</button>
                     </div>
 
                     <div class="actions">
